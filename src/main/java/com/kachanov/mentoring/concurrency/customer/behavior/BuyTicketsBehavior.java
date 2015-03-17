@@ -8,7 +8,7 @@ import com.kachanov.mentoring.concurrency.ticket.TicketStorage;
 import java.util.List;
 import java.util.Random;
 
-public class BuyMultipleTicketsBehaviorAbstract extends AbstractCustomerBehavior {
+public class BuyTicketsBehavior extends AbstractCustomerBehavior {
 
     @Override
     public void performAction(Customer customer, TicketStorage ticketStorage) {
@@ -20,7 +20,12 @@ public class BuyMultipleTicketsBehaviorAbstract extends AbstractCustomerBehavior
         System.out.println(customer + " bought " + ticketsNumber + " tickets for train #" + trainNumber);
     }
 
+    @Override
+    public boolean appliesTo(Customer customer) {
+        return true;
+    }
+
     private int getRandomTicketsNumber() {
-        return new Random().nextInt(Constants.SEATS_PER_TRAIN / 10);
+        return new Random().nextInt(Constants.SEATS_PER_TRAIN / 10) + 1;
     }
 }

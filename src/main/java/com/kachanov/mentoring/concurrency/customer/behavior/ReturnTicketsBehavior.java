@@ -6,7 +6,7 @@ import com.kachanov.mentoring.concurrency.ticket.TicketStorage;
 
 import java.util.*;
 
-public class ReturnMultipleTicketsBehavior extends AbstractCustomerBehavior {
+public class ReturnTicketsBehavior extends AbstractCustomerBehavior {
 
     @Override
     public void performAction(Customer customer, TicketStorage ticketStorage) {
@@ -21,11 +21,16 @@ public class ReturnMultipleTicketsBehavior extends AbstractCustomerBehavior {
         }
     }
 
+    @Override
+    public boolean appliesTo(Customer customer) {
+        return !customer.getTickets().isEmpty();
+    }
+
     private List<Ticket> getRandomTickets(Customer customer) {
         Set<Ticket> result = new HashSet<>();
         Random random = new Random();
         int totalTicketsNumber = customer.getTickets().size();
-        int ticketsNumber = random.nextInt(totalTicketsNumber);
+        int ticketsNumber = random.nextInt(totalTicketsNumber) + 1;
         while (result.size() < ticketsNumber) {
             result.add(customer.getTickets().get(random.nextInt(totalTicketsNumber)));
         }

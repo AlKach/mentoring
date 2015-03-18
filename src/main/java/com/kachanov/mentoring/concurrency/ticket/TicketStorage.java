@@ -116,11 +116,13 @@ public class TicketStorage {
     private void waitValidation() {
         while (!isWorking) {
             synchronized (workLock) {
-                try {
-                    System.out.println("Awaiting validation to complete...");
-                    workLock.wait();
-                } catch (InterruptedException e) {
-                    System.out.println(e);
+                if (!isWorking) {
+                    try {
+                        System.out.println("Awaiting validation to complete...");
+                        workLock.wait();
+                    } catch (InterruptedException e) {
+                        System.out.println(e);
+                    }
                 }
             }
         }

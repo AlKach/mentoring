@@ -1,7 +1,8 @@
 package com.kachanov.mentoring.concurrency;
 
 import com.kachanov.mentoring.concurrency.customer.Customer;
-import com.kachanov.mentoring.concurrency.customer.behavior.CustomerPerformer;
+import com.kachanov.mentoring.concurrency.customer.executor.CustomerPerformer;
+import com.kachanov.mentoring.concurrency.customer.executor.PausableExecutorHolder;
 import com.kachanov.mentoring.concurrency.ticket.TicketStorageValidator;
 
 import java.util.ArrayList;
@@ -14,9 +15,7 @@ public class App {
         for (int i = 0; i < Constants.CUSTOMERS_COUNT; i++) {
             Customer customer = new Customer(i);
             customers.add(customer);
-            Thread customerPerformer = new Thread(new CustomerPerformer(customer));
-            customerPerformer.setDaemon(true);
-            customerPerformer.start();
+            PausableExecutorHolder.getInstance().execute(new CustomerPerformer(customer));
         }
 
         new Thread(new TicketStorageValidator(customers)).start();

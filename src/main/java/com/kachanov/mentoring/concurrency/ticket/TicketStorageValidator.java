@@ -2,6 +2,7 @@ package com.kachanov.mentoring.concurrency.ticket;
 
 import com.kachanov.mentoring.concurrency.Constants;
 import com.kachanov.mentoring.concurrency.customer.Customer;
+import com.kachanov.mentoring.concurrency.customer.executor.PausableExecutorHolder;
 
 import java.util.List;
 
@@ -22,16 +23,16 @@ public class TicketStorageValidator implements Runnable {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            ticketStorage.setWorking(false);
+
+            PausableExecutorHolder.getInstance().pause();
+
             System.out.println("Validating tickets storage...");
             if (!ticketStorage.validateState(customers, Constants.TRAINS_COUNT * Constants.SEATS_PER_TRAIN)) {
                 System.exit(0);
             }
             System.out.println("Validation passed!");
-            ticketStorage.setWorking(true);
-            synchronized (ticketStorage.getWorkLock()) {
-                ticketStorage.getWorkLock().notifyAll();
-            }
+
+            PausableExecutorHolder.getInstance().resume();
         }
     }
 }

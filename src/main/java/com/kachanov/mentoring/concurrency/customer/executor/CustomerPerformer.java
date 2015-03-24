@@ -1,7 +1,9 @@
-package com.kachanov.mentoring.concurrency.customer.behavior;
+package com.kachanov.mentoring.concurrency.customer.executor;
 
 import com.kachanov.mentoring.concurrency.Constants;
 import com.kachanov.mentoring.concurrency.customer.Customer;
+import com.kachanov.mentoring.concurrency.customer.behavior.AbstractCustomerBehavior;
+import com.kachanov.mentoring.concurrency.customer.behavior.CustomerBehaviorFactory;
 import com.kachanov.mentoring.concurrency.ticket.TicketStorageHolder;
 
 import java.util.Random;
@@ -29,6 +31,8 @@ public class CustomerPerformer implements Runnable {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+
+            PausableExecutorHolder.getInstance().execute(this);
         }
     }
 

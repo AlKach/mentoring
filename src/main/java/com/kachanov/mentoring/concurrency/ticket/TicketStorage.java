@@ -1,18 +1,17 @@
 package com.kachanov.mentoring.concurrency.ticket;
 
 import com.kachanov.mentoring.concurrency.customer.Customer;
+import com.kachanov.mentoring.concurrency.util.Pair;
 
 import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class TicketStorage {
 
     private final List<Train> trains = new ArrayList<>();
 
-    private final Map<Train, List<Ticket>> ticketsPool = new HashMap<>();
-
-    private final Object workLock = new Object();
-
-    private volatile boolean isWorking = true;
+    private final Map<Train, Pair<Lock, List<Ticket>>> ticketsPool = new HashMap<>();
 
     private TicketStorage() {
 
@@ -22,20 +21,13 @@ public class TicketStorage {
         return new TicketStorageBuilder();
     }
 
-    public void setWorking(boolean isWorking) {
-        this.isWorking = isWorking;
-    }
-
-    public Object getWorkLock() {
-        return workLock;
-    }
-
     public List<Ticket> sellTickets(int trainNumber, int ticketsCount) {
-        waitValidation();
         Train train = trains.get(trainNumber);
         List<Ticket> soldTickets = new ArrayList<>();
-        synchronized (train) {
-            List<Ticket> ticketsForTrain = ticketsPool.get(train);
+        Pair<Lock, List<Ticket>> lockPair = ticketsPool.get(train);
+        lockPair.getFirst().lock();
+        try {
+            List<Ticket> ticketsForTrain = lockPair.getSecond();
             if (ticketsForTrain.size() >= ticketsCount) {
                 soldTickets.addAll(ticketsForTrain.subList(0, ticketsCount));
                 ticketsForTrain.removeAll(soldTickets);
@@ -44,13 +36,14 @@ public class TicketStorage {
             } else {
                 System.out.println("Can't sell " + ticketsCount + " tickets for " + train);
             }
+        } finally {
+            lockPair.getFirst().unlock();
         }
 
         return soldTickets;
     }
 
     public void returnTickets(List<Ticket> returnedTickets) {
-        waitValidation();
         Map<Train, List<Ticket>> returnedTicketsMap = new HashMap<>();
         for (Ticket ticket : returnedTickets) {
             Train train = ticket.getTrain();
@@ -65,67 +58,64 @@ public class TicketStorage {
             Train train = entry.getKey();
             List<Ticket> tickets = entry.getValue();
 
-            synchronized (train) {
-                List<Ticket> ticketsForTrain = ticketsPool.get(train);
+            Pair<Lock, List<Ticket>> lockPair = ticketsPool.get(train);
+
+            lockPair.getFirst().lock();
+            try {
+                List<Ticket> ticketsForTrain = lockPair.getSecond();
                 ticketsForTrain.addAll(tickets);
 
                 System.out.println("Returned " + tickets.size() + " tickets for " + train + " (" + ticketsForTrain.size() + " remaining)");
+            } finally {
+                lockPair.getFirst().unlock();
             }
         }
     }
 
     public boolean validateState(List<Customer> customers, int totalTickets) {
-        for (Train train : ticketsPool.keySet()) {
-            System.out.print("Waiting for " + train + " to be unlocked... ");
-            synchronized (train) {
+        try {
+            for (Train train : ticketsPool.keySet()) {
+                System.out.print("Waiting for " + train + " to be unlocked... ");
+                Pair<Lock, List<Ticket>> lockPair = ticketsPool.get(train);
+                lockPair.getFirst().lock();
                 System.out.println("done");
             }
-        }
 
-        Set<Ticket> checkedTickets = new HashSet<>();
-        for (Customer customer : customers) {
-            for (Ticket ticket : customer.getTickets()) {
-                if (checkedTickets.contains(ticket)) {
-                    System.out.println(ticket + " sold to two different customers!");
-                    return false;
-                } else {
-                    checkedTickets.add(ticket);
-                }
-            }
-        }
-
-        for (List<Ticket> tickets : ticketsPool.values()) {
-            for (Ticket ticket : tickets) {
-                if (checkedTickets.contains(ticket)) {
-                    System.out.println(ticket + " sold to customer but not removed from pool");
-                    return false;
-                } else {
-                    checkedTickets.add(ticket);
-                }
-            }
-        }
-
-        if (totalTickets != checkedTickets.size()) {
-            System.out.println("Tickets number mismatch. Expected " + totalTickets + ", got " + checkedTickets.size());
-            return false;
-        }
-
-        return true;
-    }
-
-    private void waitValidation() {
-        while (!isWorking) {
-            synchronized (workLock) {
-                if (!isWorking) {
-                    try {
-                        System.out.println("Awaiting validation to complete...");
-                        workLock.wait();
-                    } catch (InterruptedException e) {
-                        System.out.println(e);
+            Set<Ticket> checkedTickets = new HashSet<>();
+            for (Customer customer : customers) {
+                for (Ticket ticket : customer.getTickets()) {
+                    if (checkedTickets.contains(ticket)) {
+                        System.out.println(ticket + " sold to two different customers!");
+                        return false;
+                    } else {
+                        checkedTickets.add(ticket);
                     }
                 }
             }
+
+            for (Pair<Lock, List<Ticket>> lockPair : ticketsPool.values()) {
+                for (Ticket ticket : lockPair.getSecond()) {
+                    if (checkedTickets.contains(ticket)) {
+                        System.out.println(ticket + " sold to customer but not removed from pool");
+                        return false;
+                    } else {
+                        checkedTickets.add(ticket);
+                    }
+                }
+            }
+
+            if (totalTickets != checkedTickets.size()) {
+                System.out.println("Tickets number mismatch. Expected " + totalTickets + ", got " + checkedTickets.size());
+                return false;
+            }
+        } finally {
+            for (Train train : ticketsPool.keySet()) {
+                Pair<Lock, List<Ticket>> lockPair = ticketsPool.get(train);
+                lockPair.getFirst().unlock();
+            }
         }
+
+        return true;
     }
 
     public static class TicketStorageBuilder {
@@ -158,7 +148,9 @@ public class TicketStorage {
                     Ticket ticket = new Ticket(train, j);
                     tickets.add(ticket);
                 }
-                ticketStorage.ticketsPool.put(train, tickets);
+
+                Pair<Lock, List<Ticket>> lockPair = new Pair<Lock, List<Ticket>>(new ReentrantLock(), tickets);
+                ticketStorage.ticketsPool.put(train, lockPair);
             }
             return ticketStorage;
         }

@@ -14,6 +14,6 @@ public final class Constants {
 
     public static final int CUSTOMER_ACTION_INTERVAL_VARIATION = 200;
 
-    public static final int TICKET_STORAGE_VALIDATION_INTERVAL = 1000;
+    public static final int TICKET_STORAGE_VALIDATION_INTERVAL = 10000;
 
 }

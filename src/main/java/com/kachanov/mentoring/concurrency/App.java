@@ -14,10 +14,12 @@ public class App {
         for (int i = 0; i < Constants.CUSTOMERS_COUNT; i++) {
             Customer customer = new Customer(i);
             customers.add(customer);
-            new CustomerPerformer(customer).start();
+            Thread customerPerformer = new Thread(new CustomerPerformer(customer));
+            customerPerformer.setDaemon(true);
+            customerPerformer.start();
         }
 
-        new TicketStorageValidator(customers).start();
+        new Thread(new TicketStorageValidator(customers)).start();
     }
 
 }

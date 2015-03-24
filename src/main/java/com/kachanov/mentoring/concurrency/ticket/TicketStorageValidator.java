@@ -5,7 +5,7 @@ import com.kachanov.mentoring.concurrency.customer.Customer;
 
 import java.util.List;
 
-public class TicketStorageValidator extends Thread {
+public class TicketStorageValidator implements Runnable {
 
     private final List<Customer> customers;
 

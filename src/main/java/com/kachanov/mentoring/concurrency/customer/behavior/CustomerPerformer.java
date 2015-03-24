@@ -6,13 +6,12 @@ import com.kachanov.mentoring.concurrency.ticket.TicketStorageHolder;
 
 import java.util.Random;
 
-public class CustomerPerformer extends Thread {
+public class CustomerPerformer implements Runnable {
 
     private final Customer customer;
 
     public CustomerPerformer(Customer customer) {
         this.customer = customer;
-        setDaemon(true);
     }
 
     @Override
